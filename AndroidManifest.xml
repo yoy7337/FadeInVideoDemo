@@ -12,10 +12,15 @@
         android:targetSdkVersion="22" />
 
     <application
+        android:name="com.example.com.aoitek.fadeinvideodemo.Application"
         android:allowBackup="true"
         android:icon="@drawable/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/AppTheme" >
+        <meta-data
+            android:name="com.google.android.gms.vision.DEPENDENCIES"
+            android:value="face" />
+
         <activity
             android:name=".MainActivity"
             android:label="@string/app_name" >

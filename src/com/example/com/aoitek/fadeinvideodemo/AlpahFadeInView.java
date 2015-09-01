@@ -6,17 +6,13 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.graphics.Point;
 import android.graphics.PointF;
 import android.media.FaceDetector;
 import android.os.Environment;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
 
-import java.util.ArrayList;
-import java.util.List;
 
 public class AlpahFadeInView extends View {
 
@@ -99,7 +95,7 @@ public class AlpahFadeInView extends View {
             PointF p = new PointF();
             faces[0].getMidPoint(p);
             Log.d("yoy", "faces[0].eyesDistance(): " + faces[0].eyesDistance() + ", PointF.x: " + p.x + ", PointF.y: " + p.y);
-            
+
             return faces[0];
         } else {
             Log.w("yoy", "not detect face...: " + tag);

@@ -1,17 +1,12 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical" >
+    android:layout_height="match_parent" >
 
-    <com.example.com.aoitek.fadeinvideodemo.AlpahFadeInView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+    <com.example.com.aoitek.fadeinvideodemo.GmsAlpahFadeInView
+        android:id="@+id/fade_in_view"
+        android:layout_width="800px"
+        android:layout_height="450px"
+        android:layout_gravity="center" />
 
-    <com.example.com.aoitek.fadeinvideodemo.AlpahFadeInSurfaceView
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"  />
-
-</LinearLayout>
+</FrameLayout>
