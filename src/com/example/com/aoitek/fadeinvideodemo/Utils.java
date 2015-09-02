@@ -2,8 +2,11 @@
 package com.example.com.aoitek.fadeinvideodemo;
 
 import android.app.Activity;
+import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.util.DisplayMetrics;
+
+import com.nostra13.universalimageloader.core.ImageLoader;
 
 public class Utils {
 
@@ -39,5 +42,19 @@ public class Utils {
         DisplayMetrics displaymetrics = new DisplayMetrics();
         activity.getWindowManager().getDefaultDisplay().getMetrics(displaymetrics);
         return displaymetrics.heightPixels;
+    }
+    
+    public static Bitmap getBitmapWithSize(String imageUrl, int reqWidth, int reqHeight) {
+        Bitmap scaledBitmap = null;
+        ImageLoader imageLoader = ImageLoader.getInstance();
+
+        Bitmap bitmap = imageLoader.loadImageSync(imageUrl);
+        if (bitmap.getWidth() != reqWidth || bitmap.getHeight() != reqHeight) {
+            scaledBitmap = Bitmap.createScaledBitmap(bitmap, reqWidth, reqHeight, true);
+        } else {
+            scaledBitmap = bitmap;
+        }
+
+        return scaledBitmap;
     }
 }
