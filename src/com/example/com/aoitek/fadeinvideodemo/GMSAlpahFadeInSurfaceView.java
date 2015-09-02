@@ -8,24 +8,24 @@ import android.util.AttributeSet;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 
-public class AlpahFadeInSurfaceView extends SurfaceView implements
+public class GMSAlpahFadeInSurfaceView extends SurfaceView implements
         SurfaceHolder.Callback {
 
     final private Handler mHandler = new Handler();
     SurfaceHolder mHolder;
     Paint mPaint = new Paint();
 
-    public AlpahFadeInSurfaceView(Context context) {
+    public GMSAlpahFadeInSurfaceView(Context context) {
         super(context);
         init();
     }
 
-    public AlpahFadeInSurfaceView(Context context, AttributeSet attrs) {
+    public GMSAlpahFadeInSurfaceView(Context context, AttributeSet attrs) {
         super(context, attrs);
         init();
     }
 
-    public AlpahFadeInSurfaceView(Context context, AttributeSet attrs, int defStyleAttr) {
+    public GMSAlpahFadeInSurfaceView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
         init();
     }

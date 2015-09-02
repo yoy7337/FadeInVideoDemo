@@ -8,6 +8,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PointF;
+import android.graphics.Rect;
 import android.os.Environment;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -26,17 +27,20 @@ public class GmsAlpahFadeInView extends View {
 
     private static final String TAG = "GmsAlpahFadeInView";
     private static final String DEBUG_TAG = "debug";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
-    private static final int IMAGE_FADE_IN_TIME = (int) (3f * 1000);
-    private static final int VIEW_REFRESH_INTERVAL = 100;
+    private static final int IMAGE_FADE_IN_TIME = (int) (1f * 1000);
+    private static final int VIEW_REFRESH_INTERVAL = 50;
     private static final int MAX_ALPHA_VAL = 255;
     private static final int MIN_ALPHA_VAL = 0;
 
-    private static final double DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO = 0.8;
-    private static final double DEFAULT_EYE_FOR_VIEW_WIDTH_RATIO = 0.15;
+    private static final double DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO = 0.7;
+    private static final double DEFAULT_EYE_FOR_VIEW_WIDTH_RATIO = 0.1;
     private static final double DEFAULT_EYE_CENTER_X_FOR_VIEW_WIDTH_RATIO = 0.5;
-    private static final double DEFAULT_EYE_CENTER_Y_FOR_VIEW_HEIGHT_RATIO = 0.25;
+    private static final double DEFAULT_EYE_CENTER_Y_FOR_VIEW_HEIGHT_RATIO = 0.36;
+
+    private static final String IMAGE_LABEL = "  Made With Lollipop  ";
+    private static final double DEFAULT_TEXT_SIZE_FOR_HEIGHT_RATIO = 0.05;
 
     private int mDefaultViewWidth = 800;
     private int mDefaultViewHeight = 450;
@@ -50,6 +54,8 @@ public class GmsAlpahFadeInView extends View {
 
     private String mImagePath = null;
     private BitmapFactory.Options mBitmapOptions = new BitmapFactory.Options();
+
+    private Bitmap mBaseBitmap = null;
 
     private ImageLoader mImageLoader;
 
@@ -75,9 +81,6 @@ public class GmsAlpahFadeInView extends View {
     float mCurrentBitmapScale = 1;
     Bitmap mNextBitmap = null;
     float mNextBitmapScale = 1;
-
-    Paint mBackGroundPaint = null;
-    Paint mAlphaPaint = null;
 
     private static final String IMAGES_FILE_NAME[] = {
             "1.jpg",
@@ -114,8 +117,6 @@ public class GmsAlpahFadeInView extends View {
         mImagePath = "file://" + Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath() + "/";
         mBitmapOptions.inPreferredConfig = Bitmap.Config.RGB_565;
         mBitmapOptions.inMutable = true;
-        mBackGroundPaint = new Paint();
-        mAlphaPaint = new Paint();
 
         mImageLoader = ImageLoader.getInstance();
     }
@@ -124,20 +125,24 @@ public class GmsAlpahFadeInView extends View {
     protected void onSizeChanged(int xNew, int yNew, int xOld, int yOld) {
         super.onSizeChanged(xNew, yNew, xOld, yOld);
 
-        mDefaultViewWidth = xNew;
-        mDefaultViewHeight = yNew;
-        mDefaultImageWidth = (int) (mDefaultViewWidth * DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO);
-        mDefaultImageHeight = (int) (mDefaultViewHeight * DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO);
+        if (mBaseBitmap == null) {
 
-        mDefaultEyeDistance = (float) (mDefaultViewWidth * DEFAULT_EYE_FOR_VIEW_WIDTH_RATIO);
-        mDefaultEyeCenterX = (int) (mDefaultViewWidth * DEFAULT_EYE_CENTER_X_FOR_VIEW_WIDTH_RATIO);
-        mDefaultEyeCenterY = (int) (mDefaultViewHeight * DEFAULT_EYE_CENTER_Y_FOR_VIEW_HEIGHT_RATIO);
+            mDefaultViewWidth = xNew;
+            mDefaultViewHeight = yNew;
+            mDefaultImageWidth = (int) (mDefaultViewWidth * DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO);
+            mDefaultImageHeight = (int) (mDefaultViewHeight * DEFAULT_IMAGE_SIZE_FOR_VIEW_RATIO);
 
-        Log.d(TAG, "@onSizeChanged: mDefaultViewWidth=" + mDefaultViewWidth + ", mDefaultViewHeight=" + mDefaultViewHeight);
-        Log.d(TAG, "@onSizeChanged: mDefaultImageWidth=" + mDefaultImageWidth + ", mDefaultImageHeight=" + mDefaultImageHeight);
-        Log.d(TAG, "@onSizeChanged: mDefaultEyeDistance=" + mDefaultEyeDistance);
-        Log.d(TAG, "@onSizeChanged: mDefaultEyeCenterX=" + mDefaultEyeCenterX + ", mDefaultEyeCenterY=" + mDefaultEyeCenterY);
+            mDefaultEyeDistance = (float) (mDefaultViewWidth * DEFAULT_EYE_FOR_VIEW_WIDTH_RATIO);
+            mDefaultEyeCenterX = (int) (mDefaultViewWidth * DEFAULT_EYE_CENTER_X_FOR_VIEW_WIDTH_RATIO);
+            mDefaultEyeCenterY = (int) (mDefaultViewHeight * DEFAULT_EYE_CENTER_Y_FOR_VIEW_HEIGHT_RATIO);
 
+            Log.d(TAG, "@onSizeChanged: mDefaultViewWidth=" + mDefaultViewWidth + ", mDefaultViewHeight=" + mDefaultViewHeight);
+            Log.d(TAG, "@onSizeChanged: mDefaultImageWidth=" + mDefaultImageWidth + ", mDefaultImageHeight=" + mDefaultImageHeight);
+            Log.d(TAG, "@onSizeChanged: mDefaultEyeDistance=" + mDefaultEyeDistance);
+            Log.d(TAG, "@onSizeChanged: mDefaultEyeCenterX=" + mDefaultEyeCenterX + ", mDefaultEyeCenterY=" + mDefaultEyeCenterY);
+
+            mBaseBitmap = Bitmap.createBitmap(mDefaultViewWidth, mDefaultViewHeight, Bitmap.Config.RGB_565);
+        }
     }
 
     private void getFaceDetector() {
@@ -242,13 +247,17 @@ public class GmsAlpahFadeInView extends View {
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
 
+        Canvas myCanvas = new Canvas(mBaseBitmap);
+
         // 1. need switch bitmap?
         if (mFadeinAlpthVal >= MAX_ALPHA_VAL) {
 
             if (mCurrentImageIndex > IMAGES_FILE_NAME.length - 2) {
                 // drawBitmap(mNextBitmap, mNextFace, canvas, mBackGroundPaint);
-                drawBitmap(mNextBitmap, mNextFace, mNextBitmapScale, mNextEyeCenter, canvas, mBackGroundPaint, MAX_ALPHA_VAL);
+                drawBitmap(mNextBitmap, mNextFace, mNextBitmapScale, mNextEyeCenter, myCanvas, new Paint(), MAX_ALPHA_VAL);
                 releaseFaceDetector();
+
+                canvas.drawBitmap(mBaseBitmap, 0, 0, new Paint());
                 return;
             }
 
@@ -261,17 +270,16 @@ public class GmsAlpahFadeInView extends View {
         }
 
         if (mCurrentBitmap != null) {
-            drawBitmap(mCurrentBitmap, mCurrentFace, mCurrentBitmapScale, mCurrentEyeCenter, canvas, mBackGroundPaint, MAX_ALPHA_VAL);
+            drawBitmap(mCurrentBitmap, mCurrentFace, mCurrentBitmapScale, mCurrentEyeCenter, myCanvas, new Paint(), MAX_ALPHA_VAL);
         }
 
         if (mNextBitmap != null) {
-            mAlphaPaint.setAlpha(mFadeinAlpthVal);
-            drawBitmap(mNextBitmap, mNextFace, mNextBitmapScale, mNextEyeCenter, canvas, mAlphaPaint, mFadeinAlpthVal);
+            drawBitmap(mNextBitmap, mNextFace, mNextBitmapScale, mNextEyeCenter, myCanvas, new Paint(), mFadeinAlpthVal);
         }
 
-        drawDebugLine(canvas);
-
         postInvalidateDelayed(VIEW_REFRESH_INTERVAL);
+
+        canvas.drawBitmap(mBaseBitmap, 0, 0, new Paint());
     }
 
     private void drawDebugLine(Canvas canvas) {
@@ -284,11 +292,29 @@ public class GmsAlpahFadeInView extends View {
         canvas.drawLine(0, mDefaultEyeCenterY, mDefaultViewWidth, mDefaultEyeCenterY, paint);
     }
 
+    private void drawLabel(Canvas canvas) {
+        float textSize = (float) (mDefaultViewHeight * DEFAULT_TEXT_SIZE_FOR_HEIGHT_RATIO);
+
+        Paint textPaint = new Paint();
+        textPaint.setAntiAlias(true);
+        textPaint.setColor(Color.argb(128, 255, 255, 255));
+        textPaint.setTextSize(textSize);
+
+        Paint backgroundPaint = new Paint();
+        backgroundPaint.setAntiAlias(true);
+        backgroundPaint.setColor(Color.argb(128, 0, 0, 0));
+        canvas.drawRect(0, mDefaultViewHeight - 2 * textSize, textPaint.measureText(IMAGE_LABEL), mDefaultViewHeight, backgroundPaint);
+
+        canvas.drawText(IMAGE_LABEL, 0, mDefaultViewHeight - textSize / 2, textPaint);
+    }
+
     private void drawBitmap(Bitmap bitmap, Face face, float scale, PointF eyeCenter, Canvas canvas, Paint paint, int alpha) {
         float left = ((mDefaultViewWidth - bitmap.getWidth()) / 2);
         float top = ((mDefaultViewHeight - bitmap.getHeight()) / 2);
 
         canvas.save();
+        paint.setAntiAlias(true);
+        paint.setAlpha(alpha);
 
         if (face != null) {
             if (DEBUG) {
@@ -309,11 +335,13 @@ public class GmsAlpahFadeInView extends View {
         paint.setStyle(Paint.Style.STROKE);
         int strokeWidth = 4;
         paint.setStrokeWidth(strokeWidth * 2);
-        paint.setAntiAlias(true);
 
         canvas.drawRect(left - strokeWidth, top - strokeWidth, left + bitmap.getWidth() + strokeWidth, top + bitmap.getHeight()
                 + strokeWidth, paint);
         canvas.drawBitmap(bitmap, left, top, paint);
         canvas.restore();
+
+        // drawDebugLine(canvas);
+        drawLabel(canvas);
     }
 }
