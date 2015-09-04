@@ -27,7 +27,7 @@ public class GmsAlpahFadeInView extends View {
 
     private int mCurrentImageIndex = -1;
 
-    FaceFadeInBitmapGenerator mFaceFadeInBitmapGenerator;
+    private FaceFadeInBitmapGenerator mFaceFadeInBitmapGenerator;
 
     private static final String IMAGES_FILE_NAME[] = {
             "1.jpg",

@@ -38,9 +38,9 @@ public class FaceFadeInBitmapGenerator {
 
     // define for image label
     private static final String DEFAULT_IMAGE_LABEL = "  Made With Lollipop  ";
-    private static final double DEFAULT_TEXT_SIZE_FOR_HEIGHT_RATIO = 0.05;
-    private static final int DEFAULT_LABEL_BACKGROUND_COLOR = Color.argb(255, 255, 255, 255);
-    private static final int DEFAULT_LABEL_TEXT_COLOR = Color.argb(128, 0, 0, 0);
+    private static final double DEFAULT_TEXT_SIZE_FOR_HEIGHT_RATIO = 0.03;
+    private static final int DEFAULT_LABEL_BACKGROUND_COLOR = Color.argb(255, 0, 0, 0);
+    private static final int DEFAULT_LABEL_TEXT_COLOR = Color.argb(128, 255, 255, 255);
 
     // define for boarder
     private static final int DEFAULT_BOARDER_COLOR = Color.argb(128, 255, 255, 255);
@@ -188,13 +188,13 @@ public class FaceFadeInBitmapGenerator {
         float textSize = (float) (mHeight * DEFAULT_TEXT_SIZE_FOR_HEIGHT_RATIO);
 
         Paint textPaint = new Paint();
-        textPaint.setColor(Color.argb(128, 255, 255, 255));
+        textPaint.setColor(DEFAULT_LABEL_TEXT_COLOR);
         textPaint.setTextSize(textSize);
         Rect textBounds = new Rect();
         textPaint.getTextBounds(label, 0, label.length(), textBounds);
 
         Paint backgroundPaint = new Paint();
-        backgroundPaint.setColor(Color.argb(128, 0, 0, 0));
+        backgroundPaint.setColor(DEFAULT_LABEL_BACKGROUND_COLOR);
 
         canvas.drawRect(0, mHeight - (int) (2.5 * textBounds.height()), textPaint.measureText(DEFAULT_IMAGE_LABEL), mHeight,
                 backgroundPaint);
