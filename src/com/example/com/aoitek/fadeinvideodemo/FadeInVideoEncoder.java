@@ -62,6 +62,7 @@ public class FadeInVideoEncoder {
     private MediaCodec mAudioEncoder;
 
     private MediaMuxer mMuxer;
+    private boolean mMuxerStared = false;
     private int mTrackVideoIndex;
     private int mTrackAudioIndex;
 
@@ -69,7 +70,6 @@ public class FadeInVideoEncoder {
     private MediaCodec.BufferInfo mBufferInfo;
 
     private final FaceFadeInBitmapGenerator mFaceFadeInBitmapGenerator;
-    private final FaceDetector mFaceDetector;
 
     private MediaFormat mVideoMediaFormat;
     private MediaFormat mAudioMediaFormat;
@@ -82,7 +82,6 @@ public class FadeInVideoEncoder {
         mVideoWidth = videoWidth;
         mVideoHeight = videoHeight;
         mOutputPath = outputPath;
-        mFaceDetector = faceDetector;
         mCallback = callback;
 
         mFaceFadeInBitmapGenerator = new FaceFadeInBitmapGenerator(context, videoWidth, videoHeight, faceDetector);
@@ -153,7 +152,7 @@ public class FadeInVideoEncoder {
         int frameIndex = 0;
 
         // return progress to caller
-        final double progressStep = (100.0) / ((imagePathList.size()) * MAX_ALPHA_VAL / (FRAME_RATE * IMAGE_CHANGE_INTERVAL));
+        final double progressStep = (100.0) / ((imagePathList.size()) * (FRAME_RATE * IMAGE_CHANGE_INTERVAL));
         double currentProgress = 0;
 
         byte[] inputFrame = null;
@@ -164,15 +163,13 @@ public class FadeInVideoEncoder {
         offerAudioEncoder(audioPath, (long) (imagePathList.size() * IMAGE_CHANGE_INTERVAL * ONE_SECOND_PER_USEC));
         // -- audio
 
-        final float alphaStep = (int) (MAX_ALPHA_VAL / (FRAME_RATE * IMAGE_CHANGE_INTERVAL));
-        Log.d("yoy", "alphaStep = " + alphaStep);
+        final float alphaStep = MAX_ALPHA_VAL / (FRAME_RATE * IMAGE_CHANGE_INTERVAL);
+        Log.d("yoy", "alphaStep = " + alphaStep + ", progressStep=" + progressStep);
         for (String imagePath : imagePathList) {
             mFaceFadeInBitmapGenerator.setFadeImage(imagePath);
             float alpha = MIN_ALPHA_VAL;
             while (alpha < MAX_ALPHA_VAL) {
                 alpha += alphaStep;
-                Log.d("yoy", "imagePath =" + imagePath +
-                        ", alpha=" + alpha);
                 if (alpha >= MAX_ALPHA_VAL) {
                     alpha = MAX_ALPHA_VAL;
                 }
@@ -189,6 +186,8 @@ public class FadeInVideoEncoder {
                 if (currentProgress > 100) {
                     currentProgress = 100;
                 }
+
+                Log.d("yoy", "imagePath =" + imagePath + ", alpha=" + alpha + ", currentProgress=" + currentProgress);
                 if (mCallback != null) {
                     mCallback.onProgressUpdate((int) currentProgress);
                 }
@@ -224,19 +223,25 @@ public class FadeInVideoEncoder {
         MediaFormat newAudioFormat = mAudioEncoder.getOutputFormat();
         mTrackAudioIndex = mMuxer.addTrack(newAudioFormat);
 
-        outputBufferIndex = 0;
-        inputBufferIndex = mVideoEncoder.dequeueInputBuffer(-1);
-        mVideoEncoder.queueInputBuffer(inputBufferIndex, 0, 0, 0, MediaCodec.BUFFER_FLAG_CODEC_CONFIG);
+        // outputBufferIndex = 0;
+        // inputBufferIndex = mVideoEncoder.dequeueInputBuffer(-1);
+        // mVideoEncoder.queueInputBuffer(inputBufferIndex, 0, 0, 0,
+        // MediaCodec.BUFFER_FLAG_CODEC_CONFIG);
+        //
+        // while (outputBufferIndex != MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+        // outputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
+        // Log.d("yoy", "@video outputBufferIndex = " + outputBufferIndex);
+        // }
+        //
+        // MediaFormat newVideoFormat = mVideoEncoder.getOutputFormat();
+        // mTrackVideoIndex = mMuxer.addTrack(newVideoFormat);
+        Bitmap bitmap = Bitmap.createBitmap(mVideoWidth, mVideoHeight, Bitmap.Config.RGB_565);
+        byte[] inputFrame = VideoEncodeUtils.getNV21(mVideoWidth, mVideoHeight, bitmap);
+        offerVideoEncoder(inputFrame, 0, false);
+        bitmap.recycle();
 
-        while (outputBufferIndex != MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
-            outputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
-            Log.d("yoy", "@video outputBufferIndex = " + outputBufferIndex);
-        }
-
-        MediaFormat newVideoFormat = mVideoEncoder.getOutputFormat();
-        mTrackVideoIndex = mMuxer.addTrack(newVideoFormat);
-
-        mMuxer.start();
+        // mMuxer.start();
+        // mMuxerStared = true;
     }
 
     private void offerAudioEncoder(String audioPath, long totalTimeUs) throws IOException {
@@ -273,11 +278,11 @@ public class FadeInVideoEncoder {
 
                     if (presentationTimeUs >= totalTimeUs) {
                         mAudioEncoder
-                                .queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, MediaCodec.BUFFER_FLAG_KEY_FRAME);
+                                .queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, 0);
                     } else {
-                        mAudioEncoder
-                                .queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, MediaCodec.BUFFER_FLAG_KEY_FRAME);
+                        mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, 0);
                     }
+
                     presentationTimeUs = ONE_SECOND_PER_USEC * (totalBytesRead / 4) / SAMPLING_RATE;
                 } else {
                     mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
@@ -366,7 +371,10 @@ public class FadeInVideoEncoder {
                 int outputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
 
                 if (outputBufferIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
-                    if (!finished) {
+                    if (!mMuxerStared) {
+                        Log.d("yoy", "INFO_TRY_AGAIN_LATER");
+                    } else if (!finished) {
+                        Log.d(TAG, "INFO_TRY_AGAIN_LATER");
                         break;
                     } else {
                         Log.d(TAG, "no output available, finished");
@@ -376,9 +384,14 @@ public class FadeInVideoEncoder {
                     outputBuffers = mVideoEncoder.getOutputBuffers();
                     outputBufferIndex = mVideoEncoder.dequeueOutputBuffer(mBufferInfo, TIMEOUT_USEC);
                     Log.d("yoy", "@video INFO_OUTPUT_BUFFERS_CHANGED");
-                } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                } else if (outputBufferIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED && !mMuxerStared) {
+                    Log.d("yoy", "video out format change");
                     MediaFormat newFormat = mVideoEncoder.getOutputFormat();
+                    mTrackVideoIndex = mMuxer.addTrack(newFormat);
                     Log.d(TAG, "@video encoder output format changed: " + newFormat);
+                    mMuxer.start();
+                    mMuxerStared = true;
+                    break;
                 } else if (outputBufferIndex < 0) {
                     Log.w(TAG, "unexpected result from encoder.dequeueOutputBuffer: "
                             + outputBufferIndex);

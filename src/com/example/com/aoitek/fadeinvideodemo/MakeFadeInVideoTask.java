@@ -119,8 +119,7 @@ class MakeFadeInVideoTask extends TrackableAsyncTask<Void, Void, String> impleme
                 .build();
 
         if (!faceDetector.isOperational()) {
-            Toast.makeText(mContext, "Face detector dependencies are not yet available.", Toast.LENGTH_SHORT)
-                    .show();
+            Log.d(TAG, "Face detector dependencies are not yet available.");
         }
 
         return faceDetector;
