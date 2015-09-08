@@ -10,8 +10,10 @@ import android.widget.Toast;
 
 import com.google.android.gms.vision.face.FaceDetector;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.List;
 
 class MakeFadeInVideoTask extends TrackableAsyncTask<Void, Void, String> implements FadeInVideoEncoder.Callback {
@@ -24,27 +26,18 @@ class MakeFadeInVideoTask extends TrackableAsyncTask<Void, Void, String> impleme
     private long mStartTime;
     private long mEndTime;
     final private List<String> mImagePathList;
-    final private String mAudioPath;
+    final private InputStream mAudioIn;
     final private Callback mCallback;
     final private Context mContext;
     private ProgressBar mProgress;
 
-    public MakeFadeInVideoTask(Context context, List<String> imagePathList, String audioPath, Tracker tracker, Callback callback) {
-        super(tracker);
-
-        mContext = context;
-        mImagePathList = imagePathList;
-        mAudioPath = audioPath;
-        mCallback = callback;
-    }
-
-    public MakeFadeInVideoTask(Context context, List<String> imagePathList, String audioPath, Tracker tracker, Callback callback,
+    public MakeFadeInVideoTask(Context context, List<String> imagePathList, InputStream audioIn, Tracker tracker, Callback callback,
             ProgressBar progress) {
         super(tracker);
 
         mContext = context;
         mImagePathList = imagePathList;
-        mAudioPath = audioPath;
+        mAudioIn = audioIn;
         mCallback = callback;
         mProgress = progress;
 
@@ -63,7 +56,7 @@ class MakeFadeInVideoTask extends TrackableAsyncTask<Void, Void, String> impleme
             FadeInVideoEncoder avc = new FadeInVideoEncoder(mContext, VIDEO_WIDTH, VIDEO_HEIGHT, VIDEO_PATH, getFaceDetector(), this);
 
             try {
-                avc.encodeToMp4(mImagePathList, mAudioPath);
+                avc.encodeToMp4(mImagePathList, mAudioIn);
             } catch (IOException e) {
                 e.printStackTrace();
             }

@@ -9,6 +9,7 @@ import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -71,8 +72,9 @@ public class MakeVideoActivity extends Activity implements View.OnClickListener,
 
         String audioPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS).getAbsolutePath()
                 + "/" + AUDIO_FILE_NAME;
+        InputStream audioInputStream = this.getResources().openRawResource(R.raw.gif_audio);
 
-        MakeFadeInVideoTask makeVideoTask = new MakeFadeInVideoTask(this, photoList, audioPath, mTaskTracker, this, null);
+        MakeFadeInVideoTask makeVideoTask = new MakeFadeInVideoTask(this, photoList, audioInputStream, mTaskTracker, this, null);
         makeVideoTask.cancelPreviousAndExecuteParallel(null);
     }
 }

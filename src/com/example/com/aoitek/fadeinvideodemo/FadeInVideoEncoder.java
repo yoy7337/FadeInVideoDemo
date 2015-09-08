@@ -20,6 +20,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.List;
 
@@ -40,16 +41,14 @@ public class FadeInVideoEncoder {
     private static final String VIDEO_MIME_TYPE = "video/avc";
     private static final float IMAGE_CHANGE_INTERVAL = (float) 1.5;
     private static final int FRAME_RATE = 10;
-    private static final int IFRAME_INTERVAL = (int) (IMAGE_CHANGE_INTERVAL * FRAME_RATE);
+    private static final int IFRAME_INTERVAL = 1;
     private static final int BIT_RATE = 1024 * 1024;
-    // audio coding
+    // AAC-LC Audio coding
     private static final String AUDIO_MIME_TYPE = "audio/mp4a-latm";
     public static final int COMPRESSED_AUDIO_FILE_BIT_RATE = 128000; // 320kbps
     public static final int SAMPLING_RATE = 44100;
     public static final int BUFFER_SIZE = SAMPLING_RATE * 2;
-
-    // encode to H.264 raw file or mp4
-    private static final boolean ENCODE_TO_RAW_FILE = false;
+    public static final int AUDIO_CHANNEL_NUM = 2;
 
     private static final int MAX_ALPHA_VAL = 255;
     private static final int MIN_ALPHA_VAL = 0;
@@ -127,7 +126,7 @@ public class FadeInVideoEncoder {
             mVideoEncoder.start();
 
             // for audio
-            mAudioMediaFormat = MediaFormat.createAudioFormat(AUDIO_MIME_TYPE, SAMPLING_RATE, 2);
+            mAudioMediaFormat = MediaFormat.createAudioFormat(AUDIO_MIME_TYPE, SAMPLING_RATE, AUDIO_CHANNEL_NUM);
             mAudioMediaFormat.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
             mAudioMediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, COMPRESSED_AUDIO_FILE_BIT_RATE);
             mAudioMediaFormat.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, BUFFER_SIZE);
@@ -148,7 +147,7 @@ public class FadeInVideoEncoder {
         }
     }
 
-    public void encodeToMp4(List<String> imagePathList, String audioPath) throws IOException {
+    public void encodeToMp4(List<String> imagePathList, InputStream audioIn) throws IOException {
         int frameIndex = 0;
 
         // return progress to caller
@@ -160,7 +159,9 @@ public class FadeInVideoEncoder {
         initMuxer();
 
         // ++ audio
-        offerAudioEncoder(audioPath, (long) (imagePathList.size() * IMAGE_CHANGE_INTERVAL * ONE_SECOND_PER_USEC));
+        if (audioIn != null) {
+            offerAudioEncoder(audioIn, (long) (imagePathList.size() * IMAGE_CHANGE_INTERVAL * ONE_SECOND_PER_USEC));
+        }
         // -- audio
 
         final float alphaStep = MAX_ALPHA_VAL / (FRAME_RATE * IMAGE_CHANGE_INTERVAL);
@@ -244,13 +245,15 @@ public class FadeInVideoEncoder {
         // mMuxerStared = true;
     }
 
-    private void offerAudioEncoder(String audioPath, long totalTimeUs) throws IOException {
+    private void offerAudioEncoder(InputStream audioIn, long totalTimeUs) throws IOException {
         int totalBytesRead = 0;
         byte[] tempBuffer = new byte[BUFFER_SIZE];
         long presentationTimeUs = 0;
 
-        File audioFile = new File(audioPath);
-        FileInputStream fis = new FileInputStream(audioFile);
+        if (audioIn.markSupported()) {
+            // mark 20 seconds
+            audioIn.mark(20 * SAMPLING_RATE * AUDIO_CHANNEL_NUM * 2);
+        }
 
         while (presentationTimeUs <= totalTimeUs) {
 
@@ -269,7 +272,7 @@ public class FadeInVideoEncoder {
 
                 inputBuffer.clear();
                 Log.d("yoy", "inputBuffer.limit() = " + inputBuffer.limit());
-                int bytesRead = fis.read(tempBuffer, 0, inputBuffer.limit());
+                int bytesRead = audioIn.read(tempBuffer, 0, inputBuffer.limit());
 
                 if (bytesRead > 0) {
                     totalBytesRead += bytesRead;
@@ -278,16 +281,18 @@ public class FadeInVideoEncoder {
 
                     if (presentationTimeUs >= totalTimeUs) {
                         mAudioEncoder
-                                .queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, 0);
+                                .queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
                     } else {
                         mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, bytesRead, presentationTimeUs, 0);
                     }
-
-                    presentationTimeUs = ONE_SECOND_PER_USEC * (totalBytesRead / 4) / SAMPLING_RATE;
+                    presentationTimeUs = ONE_SECOND_PER_USEC * (totalBytesRead / (AUDIO_CHANNEL_NUM * 2)) / SAMPLING_RATE;
                 } else {
-                    mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
-                    // file end...
-                    break;
+                    if (audioIn.markSupported()) {
+                        audioIn.reset();
+                    } else {
+                        mAudioEncoder.queueInputBuffer(inputBufferIndex, 0, 0, presentationTimeUs, MediaCodec.BUFFER_FLAG_END_OF_STREAM);
+                        break;
+                    }
                 }
 
                 ByteBuffer outputBuffer = null;
